@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -9,6 +9,7 @@ namespace Majordomo
     public class PanelLogs : ITaiwuWindow
     {
         public const int N_MESSAGES_PER_CONTENT_ITEM = 10;
+        private const int MESSAGE_MAX_LENGTH = 1000;
 
         private GameObject parent;
         private GameObject panel;
@@ -80,9 +81,11 @@ namespace Majordomo
 
         private void CreatePanel()
         {
+            // 此函数的触发条件就是 BuildingWindow.Start, 所以 BuildingWindow 的实例一定存在
+            var ququBox = BuildingWindow.instance.GetComponentInChildren<QuquBox>();
+
             // clone & modify panel
-            if (!QuquBox.instance.ququBoxWindow) throw new Exception("QuquBox.instance.ququBoxWindow is null");
-            var oriPanel = Common.GetChild(QuquBox.instance.ququBoxWindow, "QuquBoxHolder");
+            var oriPanel = Common.GetChild(ququBox.ququBoxWindow, "QuquBoxHolder");
             this.panel = UnityEngine.Object.Instantiate(oriPanel, this.parent.transform);
             this.panel.SetActive(true);
             this.panel.name = "MajordomoPanelLogs";
@@ -97,9 +100,11 @@ namespace Majordomo
             Common.RemoveChildren(this.panel);
 
             // clone & modify message view
-            if (!ActorMenu.instance.actorMassage) throw new Exception("ActorMenu.instance.actorMassage is null");
-            var oriMessageView = Common.GetChild(ActorMenu.instance.actorMassage, "ActorMassageView");
-            if (!oriMessageView) throw new Exception("Failed to get child 'ActorMassageView' from ActorMenu.instance.actorMassage");
+            var goActorMenu = Resources.Load<GameObject>("OldScenePrefabs/ActorMenu");
+            var actorMenu = goActorMenu.GetComponentInChildren<ActorMenu>();
+
+            var oriMessageView = Common.GetChild(actorMenu.actorMassage, "ActorMassageView");
+            if (!oriMessageView) throw new Exception("Failed to get child 'ActorMassageView' from ActorMenu.actorMassage");
 
             var messageView = UnityEngine.Object.Instantiate(oriMessageView, this.panel.transform);
             messageView.SetActive(true);
@@ -141,8 +146,8 @@ namespace Majordomo
             scrollbar.name = "MajordomoMessageScrollbar";
 
             // clone & modify page text
-            var oriPageText = Common.GetChild(ActorMenu.instance.actorMassage, "PageText");
-            if (!oriPageText) throw new Exception("Failed to get child 'PageText' from ActorMenu.instance.actorMassage");
+            var oriPageText = Common.GetChild(actorMenu.actorMassage, "PageText");
+            if (!oriPageText) throw new Exception("Failed to get child 'PageText' from ActorMenu.actorMassage");
 
             var pageText = UnityEngine.Object.Instantiate(oriPageText, this.panel.transform);
             pageText.SetActive(true);
@@ -156,8 +161,8 @@ namespace Majordomo
             Common.RemoveComponent<SetFont>(pageText);
 
             // clone & modify page button prev
-            var oriPageButtonPrev = Common.GetChild(ActorMenu.instance.actorMassage, "Page-Button");
-            if (!oriPageButtonPrev) throw new Exception("Failed to get child 'Page-Button' from ActorMenu.instance.actorMassage");
+            var oriPageButtonPrev = Common.GetChild(actorMenu.actorMassage, "Page-Button");
+            if (!oriPageButtonPrev) throw new Exception("Failed to get child 'Page-Button' from ActorMenu.actorMassage");
 
             var pageButtonPrev = UnityEngine.Object.Instantiate(oriPageButtonPrev, this.panel.transform);
             pageButtonPrev.SetActive(true);
@@ -168,8 +173,8 @@ namespace Majordomo
             btnPrev.onClick.AddListener(() => this.ChangeMessagePage(next: false));
 
             // clone & modify page button next
-            var oriPageButtonNext = Common.GetChild(ActorMenu.instance.actorMassage, "Page+Button");
-            if (!oriPageButtonNext) throw new Exception("Failed to get child 'Page+Button' from ActorMenu.instance.actorMassage");
+            var oriPageButtonNext = Common.GetChild(actorMenu.actorMassage, "Page+Button");
+            if (!oriPageButtonNext) throw new Exception("Failed to get child 'Page+Button' from ActorMenu.actorMassage");
 
             var pageButtonNext = UnityEngine.Object.Instantiate(oriPageButtonNext, this.panel.transform);
             pageButtonNext.SetActive(true);
@@ -196,7 +201,13 @@ namespace Majordomo
                 var record = this.history[date];
                 var messages = record.messages
                     .Where(message => message.importance >= Main.settings.messageImportanceThreshold)
-                    .Select(message => TaiwuCommon.SetColor(TaiwuCommon.COLOR_LIGHT_GRAY, "·") + " " + message.content)
+                    .Select(message => {
+                        var content = message.content.Length > MESSAGE_MAX_LENGTH ?
+                            message.content.Substring(0, MESSAGE_MAX_LENGTH) +
+                                TaiwuCommon.SetColor(TaiwuCommon.COLOR_DARK_GRAY, "……") :
+                            message.content;
+                        return TaiwuCommon.SetColor(TaiwuCommon.COLOR_LIGHT_GRAY, "·") + " " + content;
+                        })
                     .ToList();
                 this.CreateMessageContentItems(messages);
             }

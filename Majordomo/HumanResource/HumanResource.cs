@@ -1,4 +1,4 @@
-﻿using Harmony12;
+using Harmony12;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -169,7 +169,7 @@ namespace Majordomo
                 stats.avgHealthPoison += 1f - TaiwuCommon.GetPoisoningRate(workerId);
                 stats.avgHealthLifespan += 1f - TaiwuCommon.GetLifespanDamageRate(workerId);
 
-                int mood = int.Parse(DateFile.instance.GetActorDate(workerId, 4, addValue: false));
+                int mood = int.Parse(DateFile.instance.GetActorDate(workerId, 4, false));
                 int favor = DateFile.instance.GetActorFavor(false, mainActorId, workerId);
                 int favorLevel = DateFile.instance.GetActorFavor(false, mainActorId, workerId, getLevel: true);
                 int scaledFavor = Original.GetScaledFavor(favorLevel);
@@ -433,7 +433,7 @@ namespace Majordomo
         /// <returns></returns>
         private static int GetLackedMoodAndFavor(int actorId)
         {
-            int currMood = int.Parse(DateFile.instance.GetActorDate(actorId, 4, addValue: false));
+            int currMood = int.Parse(DateFile.instance.GetActorDate(actorId, 4, false));
             int currFavorLevel = DateFile.instance.GetActorFavor(false, DateFile.instance.MianActorID(), actorId, getLevel: true);
             int currScaledFavor = Original.GetScaledFavor(currFavorLevel);
             currScaledFavor = Original.AdjustScaledFavorWithMood(currScaledFavor, currMood);
@@ -513,12 +513,11 @@ namespace Majordomo
             {
                 int buildingIndex = entry.Key;
                 int[] building = entry.Value;
+
+                if (!Original.BuildingNeedsWorker(this.partId, this.placeId, buildingIndex)) continue;
+                
                 int baseBuildingId = building[0];
-
                 var baseBuilding = DateFile.instance.basehomePlaceDate[baseBuildingId];
-                bool needWorker = int.Parse(baseBuilding[3]) == 1;
-                if (!needWorker) continue;
-
                 int requiredAttrId = int.Parse(baseBuilding[33]);
 
                 int[] requiredAttrValues = Original.GetRequiredAttributeValues(this.partId, this.placeId, buildingIndex);
